@@ -40,7 +40,7 @@ function randomInteger(min, max) {
  *
  */
 function setDelay(difficulty) {
-  // TODO: Write your code here.
+  
   if (difficulty === "easy") {
 		return 1500;
 	} else if (difficulty === "normal") {
@@ -65,7 +65,7 @@ function setDelay(difficulty) {
  * chooseHole(holes) //> returns one of the 9 holes that you defined
  */
 function chooseHole(holes) {
-  // TODO: Write your code here.
+  
   const index = randomInteger(0, 8);
 	const hole = holes[index];
 	if (hole === lastHole) {
@@ -96,7 +96,7 @@ function chooseHole(holes) {
 *
 */
 function gameOver() {
-  // TODO: Write your code here
+  
   if (time > 0) {
 		timeoutId = showUp();
 		return timeoutId;
@@ -116,8 +116,8 @@ function gameOver() {
 *
 */
 function showUp() {
-  let delay = setDelay(difficulty); // TODO: Update so that it uses setDelay()
-  const hole = chooseHole(holes);  // TODO: Update so that it use chooseHole()
+  let delay = setDelay(difficulty); // Update so that it uses setDelay()
+  const hole = chooseHole(holes);  // Update so that it use chooseHole()
   return showAndHide(hole, delay);
 }
 
@@ -130,13 +130,13 @@ function showUp() {
 *
 */
 function showAndHide(hole, delay){
-  // TODO: call the toggleVisibility function so that it adds the 'show' class.
+  // call the toggleVisibility function so that it adds the 'show' class.
   toggleVisibility(hole);
   const timeoutID = setTimeout(() => {
-    // TODO: call the toggleVisibility function so that it removes the 'show' class when the timer times out.
+    // call the toggleVisibility function so that it removes the 'show' class when the timer times out.
     toggleVisibility(hole);
     gameOver();
-  }, delay); // TODO: change the setTimeout delay to the one provided as a parameter
+  }, delay); // change the setTimeout delay to the one provided as a parameter
   return timeoutID;
 }
 
@@ -147,7 +147,7 @@ function showAndHide(hole, delay){
 *
 */
 function toggleVisibility(hole){
-  // TODO: add hole.classList.toggle so that it adds or removes the 'show' class.
+  // add hole.classList.toggle so that it adds or removes the 'show' class.
   hole.classList.toggle("show");
   return hole;
 }
@@ -163,9 +163,9 @@ function toggleVisibility(hole){
 *
 */
 function updateScore() {
-  // TODO: Write your code here
-
-  return points;
+  points += 1;
+	score.textContent = points;
+	return points;
 }
 
 /**
@@ -176,9 +176,8 @@ function updateScore() {
 *
 */
 function clearScore() {
-  // TODO: Write your code here
-  // points = 0;
-  // score.textContent = points;
+   points = 0;
+   score.textContent = points;
   return points;
 }
 
@@ -188,9 +187,10 @@ function clearScore() {
 *
 */
 function updateTimer() {
-  // TODO: Write your code here.
-  // hint: this code is provided to you in the instructions.
-  
+  if (time > 0){
+    time -= 1;
+    timerDisplay.textContent = time;
+  }
   return time;
 }
 
@@ -201,8 +201,7 @@ function updateTimer() {
 *
 */
 function startTimer() {
-  // TODO: Write your code here
-  // timer = setInterval(updateTimer, 1000);
+  timer = setInterval(updateTimer, 1000);
   return timer;
 }
 
@@ -215,8 +214,7 @@ function startTimer() {
 *
 */
 function whack(event) {
-  // TODO: Write your code here.
-  // call updateScore()
+  updateScore()
   return points;
 }
 
@@ -226,8 +224,7 @@ function whack(event) {
 * for an example on how to set event listeners using a for loop.
 */
 function setEventListeners(){
-  // TODO: Write your code here
-
+  moles.forEach((moles) => moles.addEventListener("click", whack));
   return moles;
 }
 
