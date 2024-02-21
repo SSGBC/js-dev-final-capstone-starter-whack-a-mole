@@ -8,8 +8,9 @@ let time = 0;
 let timer;
 let lastHole = 0;
 let points = 0;
-let difficulty = "easy";
-let moleWhacked = false;
+let difficulty = "";
+let duration = 0;
+let previousHole = '';
 
 /**
  * Generates a random integer within a range.
@@ -40,16 +41,22 @@ function randomInteger(min, max) {
  *
  */
 function setDelay(difficulty) {
-  
-  if (difficulty === "easy") {
-		return 1500;
-	} else if (difficulty === "normal") {
-		return 1000;
-	} else if (difficulty === "hard") {
-		return randomInteger(600, 1200);
-	} else {
-    return 0;
+  let timeDelay;
+  try {
+    if (difficulty === "easy") {
+      timeDelay = 1500;
+    } else if (difficulty === "normal") {
+      timeDelay = 1000;
+    } else if (difficulty === "hard") {
+      const randNum = Math.floor(Math.random() * (1200 - 600 + 1)) + 600;
+      timeDelay = randNum;
+    } else {
+      timeDelay = 200;
+    }
+  } catch (error) {
+    console.log("error: difficulty not set",error);
   }
+  return timeDelay;
 }
 
 /**
@@ -66,16 +73,18 @@ function setDelay(difficulty) {
  * const holes = document.querySelectorAll('.hole');
  * chooseHole(holes) //> returns one of the 9 holes that you defined
  */
+
+const randNum = (min, max) => Math.floor(Math.random() * (max - min + 1));
+
 function chooseHole(holes) {
-  
-  const index = randomInteger(0, 8);
-	const hole = holes[index];
-	if (hole === lastHole) {
-		return chooseHole(holes);
-	}else {
-	  lastHole = hole;
+  const index = randNum(0, 8);
+  const hole = holes[index];
+  // if hole index matches previous hole, choose different hole.
+  if (hole === lastHole) {
+    return chooseHole(holes);
   }
-	return hole;
+  lastHole = hole;
+  return hole;
 }
 
 /**
@@ -100,12 +109,11 @@ function chooseHole(holes) {
 */
 function gameOver() {
   if (time > 0) {
-		const timeoutId = showUp();
+		timeoutId = showUp();
 		return timeoutId;
 	} else {
-		stopGame();
-    stopAudio(song);
-		return "game stopped";
+		gameStopped = stopGame();
+    return gameStopped;
 	}
 }
 
@@ -119,12 +127,11 @@ function gameOver() {
 *
 */
 function showUp() {
-  console.log("showUp function called");
-  moleWhacked = false;
-  let delay = setDelay(difficulty); // Update so that it uses setDelay()
-  const hole = chooseHole(holes);  // Update so that it use chooseHole()
+  let delay = setDelay(difficulty);
+   const hole = chooseHole(holes);
   return showAndHide(hole, delay);
 }
+ 
 
 /**
 *
@@ -134,24 +141,35 @@ function showUp() {
 * the timeoutID
 *
 */
-let timeoutID;
 
-function showAndHide(hole, delay){
-  // call the toggleVisibility function so that it adds the 'show' class.
-  toggleVisibility(hole);
-  const timeoutID = setTimeout(() => {
-    // call the toggleVisibility function so that it removes the 'show' class when the timer times out.
+function showAndHide(hole, delay) {
+  let timeoutID = setTimeout(() => {
+    // console.log('hole:',hole)
+    hidePreviousHole(previousHole); 
     toggleVisibility(hole);
+
+    /**
+     * used to ensure previousHole and hole are out of phase by 'one hole'
+    */
+    if(counter != 0){
+      previousHole = hole;
+    }
     gameOver();
-    moleWhacked = false;
-  }, 1000);
-   
-   setTimeout(() => {
-    moleWhacked = false; // Reset the flag after a delay
   }, delay);
-  
   return timeoutID;
 }
+
+let counter = 0;
+
+function hidePreviousHole(previousHole){
+  if(counter > 0 && previousHole !=''){
+   removeHole(previousHole);
+   // console.log('previousHole:',previousHole);
+  }
+  counter ++;
+ //  console.log(counter);
+ }
+
 
 /**
 *
@@ -166,6 +184,25 @@ function toggleVisibility(hole){
 }
 
 /**
+ * removes the 'show' class from a given hole
+*/
+function removeHole(hole){
+  hole.classList.remove("show");
+  return hole;
+}
+
+/** 
+ * for each item in the holes nodelist, remove the 'show' class to hide 
+ * all moles when game has ended, will be called by gameStopped()
+*/
+function hideAll(holes) {
+  holes.forEach(function (hole, index) {
+    holes[index].classList.remove("show");
+  });
+  return holes;
+}
+
+/**
 *
 * This function increments the points global variable and updates the scoreboard.
 * Use the `points` global variable that is already defined and increment it by 1.
@@ -176,7 +213,6 @@ function toggleVisibility(hole){
 *
 */
 function updateScore() {
-  console.log("updateScore function called");
   points += 1;
 	score.textContent = points;
 	return points;
@@ -190,8 +226,8 @@ function updateScore() {
 *
 */
 function clearScore() {
-   points = 0;
-   score.textContent = points;
+  points = 0;
+  score.textContent = points;
   return points;
 }
 
@@ -201,7 +237,6 @@ function clearScore() {
 *
 */
 function updateTimer() {
-  console.log("updateTimer function called");
   if (time > 0){
     time -= 1;
     timerDisplay.textContent = time;
@@ -216,8 +251,8 @@ function updateTimer() {
 *
 */
 function startTimer() {
-  return setInterval(updateTimer, 1000);
-  
+  timer = setInterval(updateTimer, 1000);
+  return timer;
 }
 
 /**
@@ -229,15 +264,27 @@ function startTimer() {
 *
 */
 function whack(event) {
-  if (!moleWhacked) {
-    moleWhacked = true; // Set the flag to true to indicate that the mole has been whacked
   updateScore();
-  playAudio(audioHit);
-    setTimeout(() => {
-      moleWhacked = false; // Reset the flag after a delay
-    }, 1000);
-  }
+  hideClickedMole(event);
   return points;
+}
+
+/**
+   * 
+   * gets id from mole that is clicked, removes text from id so only 
+   * number remains. Use number to remove 'show' class from holes 
+   * at a given index
+   * 
+   */
+function hideClickedMole(event) {
+  let moleClicked = event.target.id.slice(4); //ex: mole1 -> 1
+  holes[moleClicked].classList.remove("show"); //holes[1].classList...
+}
+
+function getDifficulty() {
+  // uses querySelector to get value from difficulty drop down
+  const diff = document.querySelector("#diff-select");
+  return diff.value;
 }
 
 /**
@@ -246,10 +293,7 @@ function whack(event) {
 * for an example on how to set event listeners using a for loop.
 */
 function setEventListeners(){
-  moles.forEach(mole => mole.addEventListener('click', function(event) {
-    whack(event);
-    mole.removeEventListener('click', arguments.callee); // Remove the event listener after clicking
-  }));
+  moles.forEach((mole) => mole.addEventListener("click", whack));
   return moles;
 }
 
@@ -260,8 +304,27 @@ function setEventListeners(){
 *
 */
 function setDuration(duration) {
-  time = duration;
+  time = duration + 1;
   return time;
+}
+
+/**
+ * 
+ * uses difficulty of level to modify the length of the game. 
+ * 
+ * */
+function getDuration(difficulty) {
+  let gameLength = 0;
+  if(difficulty === "easy"){
+    gameLength = 30;
+  } else if (difficulty === "normal"){
+    gameLength = 20;
+  } else if (difficulty === "hard"){
+    gameLength = 15;
+  } else {
+    gameLength = 10;
+  }
+  return gameLength;
 }
 
 /**
@@ -271,12 +334,8 @@ function setDuration(duration) {
 *
 */
 function stopGame(){
-  console.log("stopGame function called");
-  clearTimeout(timeoutID);
   clearInterval(timer);
-  clearScore();
-  // stopAudio(song);  //optional
-  moleWhacked = false;
+  hideAll(holes);
   return "game stopped";
 }
 
@@ -287,12 +346,22 @@ function stopGame(){
 *
 */
 function startGame(){
-  setDuration(15);
-  showUp();
-  points = 0;
+  // gets the difficulty the player has selected
+  diffSelected = getDifficulty();
+  // sets global difficulty to difficulty level selected
+  difficulty = diffSelected;
+  // clears score from last game, if first game, does nothing
   clearScore();
-  startTimer();
+  // sets event listners for all moles
   setEventListeners();
+  // sets global duration to length of time defined by difficulty the player has chosen
+  duration = getDuration(difficulty);
+  // calls setDuation with global duration as parameter
+  setDuration(duration);
+  // starts timer for the game
+  startTimer();
+  // checks to when condition is met to end game.
+  gameOver();
   return "game started";
 }
 
